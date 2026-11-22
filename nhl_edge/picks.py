@@ -249,15 +249,10 @@ def upsert_from_board(
     return store
 
 
-def grade_open_picks(
-    store: dict[str, Any],
-    games: pd.DataFrame,
-) -> dict[str, Any]:
-    """Fill W/L/P + profit when BallDontLie marks the game final."""
-    if games is None or games.empty:
-        return store
-
+def _build_game_lookup(games: pd.DataFrame) -> dict[Any, pd.Series]:
     lookup: dict[Any, pd.Series] = {}
+    if games is None or games.empty:
+        return lookup
     for _, row in games.iterrows():
         gid = row.get("game_id")
         if pd.isna(gid):
@@ -266,21 +261,44 @@ def grade_open_picks(
             lookup[int(gid)] = row
         except (TypeError, ValueError):
             lookup[gid] = row
+        away = str(row.get("away_abbreviation") or "").upper()
+        home = str(row.get("home_abbreviation") or "").upper()
+        date = str(row.get("game_date") or "")[:10]
+        if away and home and date:
+            lookup[f"{date}|{away}|{home}"] = row
+    return lookup
 
+
+def _lookup_pick_row(pick: dict[str, Any], lookup: dict[Any, pd.Series]) -> pd.Series | None:
+    gid = pick.get("game_id")
+    try:
+        gid_i = int(gid)
+    except (TypeError, ValueError):
+        gid_i = gid
+    row = lookup.get(gid_i)
+    if row is None:
+        row = lookup.get(gid)
+    if row is None:
+        date = str(pick.get("date") or "")[:10]
+        away = str(pick.get("away_abbreviation") or pick.get("away") or "").upper()
+        home = str(pick.get("home_abbreviation") or pick.get("home") or "").upper()
+        row = lookup.get(f"{date}|{away}|{home}")
+    return row
+
+
+def grade_open_picks(
+    store: dict[str, Any],
+    games: pd.DataFrame,
+) -> dict[str, Any]:
+    """Fill W/L/P + profit when a game is marked final."""
+    lookup = _build_game_lookup(games)
     graded = 0
     for pick in store.get("picks") or []:
         if not pick:
             continue
         if str(pick.get("result") or "").upper() in {"W", "L", "P"}:
             continue
-        gid = pick.get("game_id")
-        try:
-            gid_i = int(gid)
-        except (TypeError, ValueError):
-            gid_i = gid
-        row = lookup.get(gid_i)
-        if row is None:
-            row = lookup.get(gid)
+        row = _lookup_pick_row(pick, lookup)
         if row is None or not is_final(row):
             continue
         away_pts = row.get("away_points")
@@ -295,7 +313,7 @@ def grade_open_picks(
         pick["awayScore"] = float(away_pts)
         pick["homeScore"] = float(home_pts)
         pick["gradedAt"] = _now_iso()
-        pick["gradeSource"] = "balldontlie"
+        pick["gradeSource"] = str(row.get("grade_source") or "balldontlie")
         graded += 1
 
     store["_graded"] = graded
@@ -325,9 +343,28 @@ def save_picks(store: dict[str, Any], path: Path | None = None) -> dict[str, Any
 
 
 def sync_board_picks(board: dict[str, Any], games: pd.DataFrame) -> dict[str, Any]:
+    from nhl_edge.balldontlie import current_nhl_season, refresh_scores_for_dates
+
     store = load_picks()
     store = upsert_from_board(board, store=store)
-    store = grade_open_picks(store, games)
+
+    open_dates = [
+        str(p.get("date") or "")[:10]
+        for p in (store.get("picks") or [])
+        if p and str(p.get("result") or "").upper() not in {"W", "L", "P"}
+    ]
+    games_for_grade = games
+    if open_dates:
+        try:
+            games_for_grade = refresh_scores_for_dates(
+                games.copy() if games is not None else pd.DataFrame(),
+                open_dates,
+                current_nhl_season(),
+            )
+        except Exception as exc:  # noqa: BLE001 — grading must not kill the board publish
+            print(f"Open-pick score refresh failed: {exc}")
+
+    store = grade_open_picks(store, games_for_grade)
     payload = save_picks(store)
     print(
         f"Picks ledger: +{store.get('_inserted', 0)} new, "

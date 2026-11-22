@@ -18,18 +18,29 @@ from nhl_edge.balldontlie import (
     fetch_games_for_dates,
     fetch_season_games,
     games_to_dataframe,
+    is_final,
+    merge_prefer_finals,
     recent_date_strings,
 )
 from nhl_edge.config import DATA_DIR, GAMES_PATH, HISTORICAL_SEASONS
 
 
 def _save(games: pd.DataFrame) -> None:
-    games = games.drop_duplicates("game_id").sort_values(["game_date", "game_id"])
+    games = games.copy()
+    games["game_id"] = pd.to_numeric(games["game_id"], errors="coerce")
+    # Prefer finals / scored rows when duplicate ids appear after a merge.
+    prefer = games.apply(is_final, axis=1).astype(int) * 2 + (
+        games["home_points"].notna() & games["away_points"].notna()
+    ).astype(int)
+    games = games.assign(_prefer=prefer)
+    games = (
+        games.sort_values(["game_id", "_prefer"])
+        .drop_duplicates("game_id", keep="last")
+        .drop(columns=["_prefer"])
+        .sort_values(["game_date", "game_id"])
+    )
     games.to_csv(GAMES_PATH, index=False)
-    completed = games[
-        games["status_state"].fillna("").str.lower().eq("final")
-        | games["status"].fillna("").astype(str).str.lower().eq("final")
-    ]
+    completed = games[games.apply(is_final, axis=1)]
     print(f"Saved {len(games)} games → {GAMES_PATH}")
     print(f"Completed finals: {len(completed)}")
 
@@ -73,9 +84,7 @@ def incremental_recent(existing: pd.DataFrame, days: int = 14) -> pd.DataFrame:
     print(f"  fetched {len(recent)} games in window")
     if recent.empty:
         return existing
-    # Replace overlapping game_ids with fresh rows
-    keep = existing[~existing["game_id"].isin(recent["game_id"])]
-    return pd.concat([keep, recent], ignore_index=True)
+    return merge_prefer_finals(existing, recent)
 
 
 def main() -> int:

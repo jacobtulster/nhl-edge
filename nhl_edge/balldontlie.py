@@ -321,8 +321,53 @@ def fetch_games_for_dates(dates: list[str], season: int) -> list[dict]:
         params.append(("dates[]", d))
     payload = _bdl_get(params)
     if payload is not None:
-        return payload.get("data") or []
+        data = payload.get("data") or []
+        # Empty BDL payload must not block the NHL public score feed —
+        # otherwise open picks never see finals and stay ungraded.
+        if data:
+            return data
     return fetch_games_for_dates_nhl_web(dates)
+
+
+def merge_prefer_finals(existing: pd.DataFrame, incoming: pd.DataFrame) -> pd.DataFrame:
+    """Replace overlapping game_ids, preferring final / scored rows."""
+    if incoming is None or incoming.empty:
+        return existing
+    if existing is None or existing.empty:
+        return incoming.copy()
+
+    frames = [existing.copy(), incoming.copy()]
+    for frame in frames:
+        frame["game_id"] = pd.to_numeric(frame["game_id"], errors="coerce")
+        state = frame.get("status_state")
+        status = frame.get("status")
+        state_s = state.fillna("").astype(str).str.lower() if state is not None else ""
+        status_s = status.fillna("").astype(str).str.lower() if status is not None else ""
+        has_score = frame["home_points"].notna() & frame["away_points"].notna()
+        is_done = (
+            state_s.eq("final")
+            | status_s.eq("final")
+            | status_s.eq("off")
+            | status_s.str.contains("final", na=False)
+        )
+        frame["_prefer"] = is_done.astype(int) * 2 + has_score.astype(int)
+
+    combined = pd.concat(frames, ignore_index=True)
+    combined = combined.sort_values(["game_id", "_prefer"]).drop_duplicates(
+        "game_id", keep="last"
+    )
+    return combined.drop(columns=["_prefer"], errors="ignore").reset_index(drop=True)
+
+
+def refresh_scores_for_dates(games: pd.DataFrame, dates: list[str], season: int) -> pd.DataFrame:
+    """Pull fresh scores for specific dates and merge into the local games frame."""
+    uniq = sorted({str(d)[:10] for d in dates if d})
+    if not uniq:
+        return games
+    raw = fetch_games_for_dates(uniq, season)
+    recent = games_to_dataframe(raw)
+    print(f"  score refresh {uniq[0]}…{uniq[-1]}: {len(recent)} games")
+    return merge_prefer_finals(games, recent)
 
 
 def fetch_games_for_date(date_iso: str, season: int) -> list[dict]:

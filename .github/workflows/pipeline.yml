@@ -47,6 +47,12 @@ jobs:
             python scripts/pipeline.py
           fi
 
+      - name: Grade open picks from live scores
+        env:
+          BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
+          NHL_EDGE_REQUEST_DELAY: "0.2"
+        run: python scripts/grade_picks.py
+
       - name: Commit updated board and data
         run: |
           git config user.name "nhl-edge-bot"
