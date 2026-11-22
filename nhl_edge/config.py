@@ -37,7 +37,8 @@ MODEL_B_FEATURES = [
 ]
 
 # Seasons to keep in the local DB (BallDontLie NHL season = start year)
-HISTORICAL_SEASONS = [2023, 2024, 2025, 2026]
+# Start years (2024 → NHL season code 20242025)
+HISTORICAL_SEASONS = [2023, 2024, 2025]
 
 RUN_HOUR_START_ET = 8
 RUN_HOUR_END_ET = 23  # inclusive (11pm Eastern)
