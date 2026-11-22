@@ -37,8 +37,8 @@ Repo → **Settings** → **Secrets and variables** → **Actions** → **New re
 
 | Secret name | Where to get it |
 |-------------|-----------------|
-| `BALLDONTLIE_API_KEY` | https://app.balldontlie.io/account (NHL games need a tier that includes NHL) |
-| `ODDS_API_KEY` | https://dash.the-odds-api.com/ |
+| `BALLDONTLIE_API_KEY` | Optional for NHL — same key as NBA Edge. If NHL endpoints 401, we use the public NHL web API automatically. |
+| `ODDS_API_KEY` | https://dash.the-odds-api.com/ (moneylines) |
 
 ### 3. Turn on GitHub Pages
 

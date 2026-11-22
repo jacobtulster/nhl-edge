@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pull / update NHL games from BallDontLie into data/games.csv."""
+"""Pull / update NHL games (NHL web API fallback + optional BallDontLie)."""
 
 from __future__ import annotations
 

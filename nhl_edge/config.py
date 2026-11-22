@@ -37,8 +37,9 @@ MODEL_B_FEATURES = [
 ]
 
 # Seasons to keep in the local DB (BallDontLie NHL season = start year)
-# Start years (2024 → NHL season code 20242025)
-HISTORICAL_SEASONS = [2023, 2024, 2025]
+# Start years (2024 → NHL season code 20242025).
+# Keep this short like NBA Edge free-tier tweak — enough for Model B, fewer API calls.
+HISTORICAL_SEASONS = [2024, 2025]
 
 RUN_HOUR_START_ET = 8
 RUN_HOUR_END_ET = 23  # inclusive (11pm Eastern)

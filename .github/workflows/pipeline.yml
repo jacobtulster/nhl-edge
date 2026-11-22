@@ -38,7 +38,8 @@ jobs:
           BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           # Stay under BallDontLie free-tier limits
-          NHL_EDGE_REQUEST_DELAY: "1.6"
+          # NHL web schedule is fine at a light delay; BallDontLie NHL is optional.
+          NHL_EDGE_REQUEST_DELAY: "0.2"
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
             python scripts/pipeline.py --force

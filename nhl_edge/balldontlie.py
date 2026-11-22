@@ -17,7 +17,8 @@ import requests
 
 from nhl_edge.config import BALLDONTLIE_API_KEY, BALLDONTLIE_GAMES_URL
 
-REQUEST_DELAY = float(os.environ.get("NHL_EDGE_REQUEST_DELAY", "0.35"))
+# NHL public web API is much more permissive than BallDontLie free tier.
+REQUEST_DELAY = float(os.environ.get("NHL_EDGE_REQUEST_DELAY", "0.2"))
 NHL_WEB = "https://api-web.nhle.com/v1"
 NHL_TEAMS = [
     "ANA", "BOS", "BUF", "CAR", "CBJ", "CGY", "CHI", "COL",
@@ -241,26 +242,44 @@ def _nhl_get(url: str) -> dict:
 
 
 def fetch_season_games_nhl_web(season_start: int) -> list[dict]:
+    """
+    Walk weekly NHL schedule pages (fast) instead of 32 club-season pulls.
+    Same spirit as NBA Edge free-tier tweak: fewer calls, save-as-you-go upstream.
+    """
     code = season_code(season_start)
-    print(f"  NHL web API season {code}")
+    print(f"  NHL web API season {code} (weekly schedule)")
     by_id: dict[Any, dict] = {}
-    for team in NHL_TEAMS:
-        url = f"{NHL_WEB}/club-schedule-season/{team}/{code}"
+    # NHL season roughly mid-Oct → mid-Jun; step 7 days
+    start = date(int(season_start), 10, 1)
+    end = date(int(season_start) + 1, 6, 30)
+    cursor = start
+    weeks = 0
+    while cursor <= end:
+        weeks += 1
+        url = f"{NHL_WEB}/schedule/{cursor.isoformat()}"
         try:
             payload = _nhl_get(url)
         except Exception as exc:
-            print(f"  skip {team} {code}: {exc}")
+            print(f"  skip week {cursor}: {exc}")
+            cursor = cursor + timedelta(days=7)
             continue
-        for game in payload.get("games") or []:
-            gid = game.get("id")
-            if gid is None:
-                continue
-            # Prefer regular season (gameType 2)
-            if game.get("gameType") not in (None, 2, "2"):
-                # still keep playoffs but mark postseason via games_to_dataframe
-                pass
-            by_id[gid] = game
-        print(f"    {team}: {len(payload.get('games') or [])} games")
+        # Payload shape: { gameWeek: [ { date, games: [...] }, ... ] } or games at top
+        weeks_list = payload.get("gameWeek") or payload.get("gameWeeks") or []
+        if weeks_list:
+            for day in weeks_list:
+                for game in day.get("games") or []:
+                    gid = game.get("id")
+                    if gid is not None:
+                        by_id[gid] = game
+        else:
+            for game in payload.get("games") or []:
+                gid = game.get("id")
+                if gid is not None:
+                    by_id[gid] = game
+        if weeks % 6 == 0:
+            print(f"    through {cursor}: {len(by_id)} unique games")
+        cursor = cursor + timedelta(days=7)
+    print(f"  season {code}: {len(by_id)} games across {weeks} weeks")
     return list(by_id.values())
 
 
