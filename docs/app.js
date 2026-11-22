@@ -8,6 +8,12 @@ function odds(value) {
   return Number(value).toFixed(2);
 }
 
+function signedLine(value) {
+  if (value == null || Number.isNaN(Number(value))) return "—";
+  const v = Number(value);
+  return `${v > 0 ? "+" : ""}${v}`;
+}
+
 function evText(value) {
   if (value == null || Number.isNaN(value)) return "—";
   const sign = value > 0 ? "+" : "";
@@ -19,14 +25,10 @@ function evClass(value) {
   return value > 0 ? "ev-pos" : "ev-neg";
 }
 
-function topSide(game) {
-  if (!game.best_side || game.best_ev == null) return "—";
-  const team =
-    game.best_side === "home"
-      ? game.home_abbreviation
-      : game.away_abbreviation;
-  const hot = game.best_ev > 0 ? " hot" : "";
-  return `<span class="pill${hot}">${team} · ${evText(game.best_ev)}</span>`;
+function marketOf(p) {
+  const m = String((p && p.market) || "ml").toLowerCase();
+  if (m === "spread" || m === "spreads" || m === "ats") return "spread";
+  return "ml";
 }
 
 function fmtU(n) {
@@ -49,7 +51,27 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
+function topAts(game) {
+  const side = game.best_ats_side || game.best_side;
+  const ev = game.best_ats_ev != null ? game.best_ats_ev : game.best_ev;
+  if (!side || ev == null) return "—";
+  const team = side === "home" ? game.home_abbreviation : game.away_abbreviation;
+  const line = side === "home" ? game.home_spread : game.away_spread;
+  const hot = ev > 0 ? " hot" : "";
+  return `<span class="pill${hot}">${team} ${signedLine(line)} · ${evText(ev)}</span>`;
+}
+
+function mlBonus(game) {
+  if (!game.best_ml_side || game.best_ml_ev == null) return "—";
+  const team =
+    game.best_ml_side === "home" ? game.home_abbreviation : game.away_abbreviation;
+  const hot = game.best_ml_ev > 0 ? " hot" : "";
+  return `<span class="pill${hot}">${team} · ${evText(game.best_ml_ev)}</span>`;
+}
+
 let equityChart = null;
+let activeMarket = "spread";
+let picksStore = { picks: [], summary_ats: {}, summary_ml: {}, equity_ats: [], equity_ml: [] };
 
 async function loadBoard() {
   const meta = document.getElementById("meta");
@@ -69,7 +91,7 @@ async function loadBoard() {
 
     if (!data.games || data.games.length === 0) {
       rows.innerHTML =
-        '<tr><td colspan="7">No upcoming games on the board right now.</td></tr>';
+        '<tr><td colspan="8">No upcoming games on the board right now.</td></tr>';
       return;
     }
 
@@ -77,26 +99,68 @@ async function loadBoard() {
       .map((game) => {
         return `<tr>
           <td class="matchup">${game.away_abbreviation} @ ${game.home_abbreviation}</td>
-          <td>${pct(game.home_win_probability)}</td>
-          <td>${odds(game.home_decimal)}</td>
-          <td class="${evClass(game.home_ev)}">${evText(game.home_ev)}</td>
-          <td>${odds(game.away_decimal)}</td>
-          <td class="${evClass(game.away_ev)}">${evText(game.away_ev)}</td>
-          <td>${topSide(game)}</td>
+          <td>${pct(game.home_cover_prob)}</td>
+          <td>${signedLine(game.home_spread)}<div class="submeta">${odds(game.home_spread_decimal)} · ${escapeHtml(game.home_spread_book || "")}</div></td>
+          <td class="${evClass(game.home_ats_ev)}">${evText(game.home_ats_ev)}</td>
+          <td>${signedLine(game.away_spread)}<div class="submeta">${odds(game.away_spread_decimal)} · ${escapeHtml(game.away_spread_book || "")}</div></td>
+          <td class="${evClass(game.away_ats_ev)}">${evText(game.away_ats_ev)}</td>
+          <td>${topAts(game)}</td>
+          <td>${mlBonus(game)}</td>
         </tr>`;
       })
       .join("");
   } catch (error) {
     meta.textContent = "Could not load the board.";
-    rows.innerHTML = `<tr><td colspan="7">${error.message}</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="8">${error.message}</td></tr>`;
   }
+}
+
+function picksForMarket(market) {
+  return (picksStore.picks || []).filter((p) => marketOf(p) === market);
+}
+
+function summaryForMarket(market) {
+  if (market === "spread") {
+    return picksStore.summary_ats || picksStore.summary || {};
+  }
+  return picksStore.summary_ml || {};
+}
+
+function equityForMarket(market) {
+  if (market === "spread") {
+    return picksStore.equity_ats || picksStore.equity || [];
+  }
+  return picksStore.equity_ml || [];
+}
+
+function renderMarketTabs() {
+  const root = document.getElementById("market-tabs");
+  if (!root) return;
+  const counts = {
+    spread: picksForMarket("spread").length,
+    ml: picksForMarket("ml").length,
+  };
+  root.innerHTML = [
+    { key: "spread", label: "ATS" },
+    { key: "ml", label: "Moneyline" },
+  ]
+    .map((tab) => {
+      const on = activeMarket === tab.key ? " is-active" : "";
+      return `<button type="button" class="market-tab${on}" data-market="${tab.key}">${tab.label}<span class="market-count">${counts[tab.key]}</span></button>`;
+    })
+    .join("");
+  root.querySelectorAll("[data-market]").forEach((el) => {
+    el.addEventListener("click", () => {
+      activeMarket = el.getAttribute("data-market");
+      renderRoi();
+    });
+  });
 }
 
 function renderRoiCards(summary) {
   const root = document.getElementById("roi-cards");
   const s = summary || {};
-  const profitCls =
-    s.profit_u > 0 ? "ev-pos" : s.profit_u < 0 ? "ev-neg" : "";
+  const profitCls = s.profit_u > 0 ? "ev-pos" : s.profit_u < 0 ? "ev-neg" : "";
   const roiCls = s.roi > 0 ? "ev-pos" : s.roi < 0 ? "ev-neg" : "";
   root.innerHTML = [
     ["ROI", fmtRoi(s), roiCls],
@@ -115,6 +179,8 @@ function renderEquity(equity) {
   const ctx = document.getElementById("equity-chart");
   if (equityChart) equityChart.destroy();
   const rows = equity || [];
+  const title =
+    activeMarket === "ml" ? "No graded moneyline picks yet" : "No graded ATS picks yet";
   if (!rows.length) {
     equityChart = new Chart(ctx, {
       type: "line",
@@ -124,11 +190,7 @@ function renderEquity(equity) {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          title: {
-            display: true,
-            text: "No graded picks yet",
-            color: "#9aaba1",
-          },
+          title: { display: true, text: title, color: "#9aaba1" },
         },
       },
     });
@@ -203,7 +265,11 @@ function renderEquity(equity) {
       },
       scales: {
         x: {
-          title: { display: true, text: "Graded pick #", color: "#9aaba1" },
+          title: {
+            display: true,
+            text: activeMarket === "ml" ? "Graded ML #" : "Graded ATS #",
+            color: "#9aaba1",
+          },
           ticks: { color: "#9aaba1" },
           grid: { color: "rgba(42,52,47,0.55)" },
         },
@@ -218,11 +284,21 @@ function renderEquity(equity) {
   });
 }
 
+function fmtPickLine(p) {
+  if (marketOf(p) === "spread") {
+    const line = signedLine(p.point != null ? p.point : p.line);
+    return `${line} · ${odds(p.decimal)}`;
+  }
+  return odds(p.decimal);
+}
+
 function renderPicksTable(picks) {
   const body = document.getElementById("picks-rows");
   if (!picks || !picks.length) {
     body.innerHTML =
-      '<tr><td colspan="7">No tracked picks yet — they appear after the next hourly run when a topside has EV ≥ 0.</td></tr>';
+      activeMarket === "ml"
+        ? '<tr><td colspan="7">No moneyline bonus picks yet.</td></tr>'
+        : '<tr><td colspan="7">No ATS picks yet — they appear after the next hourly run when a topside has EV ≥ 0.</td></tr>';
     return;
   }
   body.innerHTML = picks
@@ -232,13 +308,12 @@ function renderPicksTable(picks) {
         r === "W" ? "pill hot" : r === "L" ? "pill bad" : r === "P" ? "pill" : "pill";
       const when = p.loggedAt ? new Date(p.loggedAt).toLocaleString() : "—";
       const matchup = `${p.away_abbreviation || "?"} @ ${p.home_abbreviation || "?"}`;
-      const profit =
-        r === "W" || r === "L" || r === "P" ? fmtU(p.profit) : "—";
+      const profit = r === "W" || r === "L" || r === "P" ? fmtU(p.profit) : "—";
       return `<tr>
         <td>${escapeHtml(when)}</td>
         <td class="matchup">${escapeHtml(matchup)}</td>
         <td><span class="pill">${escapeHtml(p.takeTeam || p.team || p.takeSide || "")}</span></td>
-        <td>${odds(p.decimal)}<div class="submeta">${escapeHtml(p.lineBook || "")}</div></td>
+        <td>${escapeHtml(fmtPickLine(p))}<div class="submeta">${escapeHtml(p.lineBook || "")}</div></td>
         <td class="${evClass(p.ev)}">${evText(p.ev)}</td>
         <td><span class="${resPill}">${r || "OPEN"}</span></td>
         <td class="${p.profit > 0 ? "ev-pos" : p.profit < 0 ? "ev-neg" : ""}">${profit}</td>
@@ -247,23 +322,44 @@ function renderPicksTable(picks) {
     .join("");
 }
 
+function renderRoi() {
+  const hint = document.getElementById("book-hint");
+  if (hint) {
+    hint.textContent =
+      activeMarket === "ml"
+        ? "Moneyline bonus book — never mixed into ATS ROI."
+        : "ATS is the headline book. Moneyline stays on its own tab.";
+  }
+  const summary = summaryForMarket(activeMarket);
+  const meta = document.getElementById("roi-meta");
+  meta.textContent = picksStore.updatedAt
+    ? `Ledger ${new Date(picksStore.updatedAt).toLocaleString()} · ${summary.picks || 0} ${activeMarket === "ml" ? "ML" : "ATS"} picks`
+    : "Ledger ready";
+  renderMarketTabs();
+  renderRoiCards(summary);
+  renderEquity(equityForMarket(activeMarket));
+  renderPicksTable(picksForMarket(activeMarket));
+}
+
 async function loadPicks() {
   const meta = document.getElementById("roi-meta");
   try {
     const response = await fetch(`./picks.json?t=${Date.now()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    const summary = data.summary || {};
-    meta.textContent = data.updatedAt
-      ? `Ledger ${new Date(data.updatedAt).toLocaleString()} · ${summary.picks || 0} picks`
-      : "Ledger ready";
-    renderRoiCards(summary);
-    renderEquity(data.equity || []);
-    renderPicksTable(data.picks || []);
+    picksStore = data;
+    // Migrate legacy ML-only ledgers into summary_ml when needed
+    if (!picksStore.summary_ats && picksStore.summary && !(picksStore.picks || []).some((p) => marketOf(p) === "spread")) {
+      picksStore.summary_ml = picksStore.summary;
+      picksStore.equity_ml = picksStore.equity || [];
+      picksStore.summary_ats = { picks: 0, graded: 0, w: 0, l: 0, p: 0, profit_u: 0, roi: null };
+      picksStore.equity_ats = [];
+    }
+    renderRoi();
   } catch (error) {
     meta.textContent = "Picks ledger not published yet.";
-    renderRoiCards({});
-    renderEquity([]);
+    picksStore = { picks: [], summary_ats: {}, summary_ml: {}, equity_ats: [], equity_ml: [] };
+    renderRoi();
     document.getElementById("picks-rows").innerHTML =
       `<tr><td colspan="7">${escapeHtml(error.message)}</td></tr>`;
   }

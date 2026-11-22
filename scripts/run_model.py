@@ -28,14 +28,16 @@ from nhl_edge.config import (
     MODEL_B_FEATURES,
     TEAM_STATE_PATH,
 )
+from nhl_edge.ats import cover_probability
 from nhl_edge.picks import sync_board_picks
 from nhl_edge.features import build_team_state, build_training_frame, features_for_matchup
 from nhl_edge.model import predict_home_win_prob, train_model_b
 from nhl_edge.odds import (
     american_or_decimal_to_implied,
     best_h2h_prices,
+    collect_spread_quotes,
     expected_value,
-    fetch_h2h_odds,
+    fetch_odds,
     team_key,
 )
 
@@ -98,11 +100,12 @@ def main() -> int:
 
     print(f"Scheduled/upcoming games for {today}: {len(upcoming)}")
 
-    odds_events, odds_meta = fetch_h2h_odds()
+    odds_events, odds_meta = fetch_odds("h2h,spreads")
     odds_rows = best_h2h_prices(odds_events)
     odds_lookup = {
         (r["home_abbreviation"], r["away_abbreviation"]): r for r in odds_rows
     }
+    spread_quotes = collect_spread_quotes(odds_events)
 
     board_rows = []
     for g in upcoming:
@@ -120,7 +123,6 @@ def main() -> int:
 
         odds = odds_lookup.get((home, away))
         if odds is None:
-            # Try reverse key match via team_key on full names
             for key, row in odds_lookup.items():
                 if key[0] == team_key(home) and key[1] == team_key(away):
                     odds = row
@@ -128,31 +130,57 @@ def main() -> int:
 
         home_dec = odds["home_decimal"] if odds else None
         away_dec = odds["away_decimal"] if odds else None
+        home_ml_ev = expected_value(home_prob, home_dec) if home_dec else None
+        away_ml_ev = expected_value(away_prob, away_dec) if away_dec else None
 
-        home_implied = (
-            american_or_decimal_to_implied(home_dec) if home_dec else None
-        )
-        away_implied = (
-            american_or_decimal_to_implied(away_dec) if away_dec else None
-        )
-        home_ev = (
-            expected_value(home_prob, home_dec) if home_dec else None
-        )
-        away_ev = (
-            expected_value(away_prob, away_dec) if away_dec else None
-        )
-
-        best_side = None
-        best_ev = None
-        if home_ev is not None and away_ev is not None:
-            if home_ev >= away_ev:
-                best_side, best_ev = "home", home_ev
+        best_ml_side = None
+        best_ml_ev = None
+        if home_ml_ev is not None and away_ml_ev is not None:
+            if home_ml_ev >= away_ml_ev:
+                best_ml_side, best_ml_ev = "home", home_ml_ev
             else:
-                best_side, best_ev = "away", away_ev
-        elif home_ev is not None:
-            best_side, best_ev = "home", home_ev
-        elif away_ev is not None:
-            best_side, best_ev = "away", away_ev
+                best_ml_side, best_ml_ev = "away", away_ml_ev
+        elif home_ml_ev is not None:
+            best_ml_side, best_ml_ev = "home", home_ml_ev
+        elif away_ml_ev is not None:
+            best_ml_side, best_ml_ev = "away", away_ml_ev
+
+        # ATS / puck line — pick the quote with highest model EV per side
+        best_home_ats = None
+        best_away_ats = None
+        for q in spread_quotes.get((home, away), []):
+            try:
+                point = float(q["point"])
+                dec = float(q["decimal"])
+            except (TypeError, ValueError, KeyError):
+                continue
+            cprob = cover_probability(home_prob, side=q["side"], point=point)
+            ev = expected_value(cprob, dec)
+            packed = {
+                "point": point,
+                "decimal": dec,
+                "book": q.get("book"),
+                "cover_prob": cprob,
+                "ev": ev,
+            }
+            if q["side"] == "home":
+                if best_home_ats is None or ev > best_home_ats["ev"]:
+                    best_home_ats = packed
+            elif q["side"] == "away":
+                if best_away_ats is None or ev > best_away_ats["ev"]:
+                    best_away_ats = packed
+
+        best_ats_side = None
+        best_ats_ev = None
+        if best_home_ats and best_away_ats:
+            if best_home_ats["ev"] >= best_away_ats["ev"]:
+                best_ats_side, best_ats_ev = "home", best_home_ats["ev"]
+            else:
+                best_ats_side, best_ats_ev = "away", best_away_ats["ev"]
+        elif best_home_ats:
+            best_ats_side, best_ats_ev = "home", best_home_ats["ev"]
+        elif best_away_ats:
+            best_ats_side, best_ats_ev = "away", best_away_ats["ev"]
 
         board_rows.append(
             {
@@ -164,23 +192,44 @@ def main() -> int:
                 "away_abbreviation": away,
                 "home_win_probability": round(home_prob, 4),
                 "away_win_probability": round(away_prob, 4),
+                # Primary: ATS / puck line
+                "primary_market": "spread",
+                "home_spread": best_home_ats["point"] if best_home_ats else None,
+                "away_spread": best_away_ats["point"] if best_away_ats else None,
+                "home_spread_decimal": best_home_ats["decimal"] if best_home_ats else None,
+                "away_spread_decimal": best_away_ats["decimal"] if best_away_ats else None,
+                "home_spread_book": best_home_ats["book"] if best_home_ats else None,
+                "away_spread_book": best_away_ats["book"] if best_away_ats else None,
+                "home_cover_prob": round(best_home_ats["cover_prob"], 4) if best_home_ats else None,
+                "away_cover_prob": round(best_away_ats["cover_prob"], 4) if best_away_ats else None,
+                "home_ats_ev": round(best_home_ats["ev"], 4) if best_home_ats else None,
+                "away_ats_ev": round(best_away_ats["ev"], 4) if best_away_ats else None,
+                "best_ats_side": best_ats_side,
+                "best_ats_ev": round(best_ats_ev, 4) if best_ats_ev is not None else None,
+                "best_side": best_ats_side,
+                "best_ev": round(best_ats_ev, 4) if best_ats_ev is not None else None,
+                # Bonus: moneyline
                 "home_decimal": home_dec,
                 "away_decimal": away_dec,
-                "home_implied_prob": round(home_implied, 4) if home_implied else None,
-                "away_implied_prob": round(away_implied, 4) if away_implied else None,
-                "home_ev": round(home_ev, 4) if home_ev is not None else None,
-                "away_ev": round(away_ev, 4) if away_ev is not None else None,
-                "best_side": best_side,
-                "best_ev": round(best_ev, 4) if best_ev is not None else None,
+                "home_implied_prob": (
+                    round(american_or_decimal_to_implied(home_dec), 4) if home_dec else None
+                ),
+                "away_implied_prob": (
+                    round(american_or_decimal_to_implied(away_dec), 4) if away_dec else None
+                ),
+                "home_ev": round(home_ml_ev, 4) if home_ml_ev is not None else None,
+                "away_ev": round(away_ml_ev, 4) if away_ml_ev is not None else None,
+                "best_ml_side": best_ml_side,
+                "best_ml_ev": round(best_ml_ev, 4) if best_ml_ev is not None else None,
                 "home_book": odds.get("home_book") if odds else None,
                 "away_book": odds.get("away_book") if odds else None,
                 "features": {k: round(float(feats[k]), 4) for k in MODEL_B_FEATURES},
             }
         )
 
-    # Sort by best EV descending (value first)
+    # Sort by best ATS EV descending (primary book)
     board_rows.sort(
-        key=lambda r: (r["best_ev"] is not None, r["best_ev"] or -999),
+        key=lambda r: (r["best_ats_ev"] is not None, r["best_ats_ev"] or -999),
         reverse=True,
     )
 
@@ -188,16 +237,19 @@ def main() -> int:
         "generated_at_et": now_et.strftime("%Y-%m-%d %H:%M:%S %Z"),
         "date": today,
         "season": season,
-        "model": "Model B (logistic moneyline)",
+        "model": "Model B (win prob → puck-line cover)",
         "sport": "NHL",
-        "market": "h2h",
+        "market": "spreads",
+        "bonus_market": "h2h",
+        "primary_market": "spread",
         "training_games": bundle["training_games"],
         "odds_quota": odds_meta,
         "game_count": len(board_rows),
         "games": board_rows,
         "note": (
-            "NHL moneylines only. Probabilities are model likelihoods, not guarantees. "
-            "EV is model_prob × decimal_odds − 1 using best available US book price."
+            "Primary book is ATS / puck line. Cover probs come from the win model’s "
+            "implied margin; EV = cover_prob × decimal − 1 at the best US book quote. "
+            "Moneyline EV is tracked as a separate bonus ledger."
         ),
     }
 

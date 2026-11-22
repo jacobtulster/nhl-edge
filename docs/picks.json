@@ -1,7 +1,28 @@
 {
-  "updatedAt": "2026-11-22T09:12:40.960514+00:00",
+  "updatedAt": "2026-11-22T09:28:58.461453+00:00",
   "minEv": 0.0,
+  "primaryMarket": "spread",
   "summary": {
+    "picks": 0,
+    "graded": 0,
+    "w": 0,
+    "l": 0,
+    "p": 0,
+    "win_pct": null,
+    "profit_u": 0.0,
+    "roi": null
+  },
+  "summary_ats": {
+    "picks": 0,
+    "graded": 0,
+    "w": 0,
+    "l": 0,
+    "p": 0,
+    "win_pct": null,
+    "profit_u": 0.0,
+    "roi": null
+  },
+  "summary_ml": {
     "picks": 1,
     "graded": 1,
     "w": 1,
@@ -11,13 +32,16 @@
     "profit_u": 2.65,
     "roi": 2.65
   },
-  "equity": [
+  "equity": [],
+  "equity_ats": [],
+  "equity_ml": [
     {
       "n": 1,
       "when": "2026-11-22T09:12:40.958816+00:00",
       "matchup": "MIN @ VAN",
       "side": "home",
       "team": "VAN",
+      "market": "ml",
       "result": "W",
       "profit": 2.65,
       "cum": 2.65,
@@ -27,7 +51,7 @@
   ],
   "picks": [
     {
-      "pickKey": "2026020371|home",
+      "pickKey": "2026020371|home|ml",
       "matchupId": "2026-11-21|MIN|at|VAN|home|ml",
       "loggedAt": "2026-11-22T02:31:51.114581+00:00",
       "sport": "NHL",

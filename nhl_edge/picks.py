@@ -1,4 +1,7 @@
-"""Track +EV board recommendations, auto-grade finals, publish ROI ledger."""
+"""Track +EV board recommendations, auto-grade finals, publish ROI ledger.
+
+ATS (puck line) is the primary book. Moneyline is logged as a separate bonus book.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +12,7 @@ from typing import Any
 
 import pandas as pd
 
+from nhl_edge.ats import grade_spread
 from nhl_edge.balldontlie import is_final
 from nhl_edge.config import MIN_EV_TO_TRACK, PICKS_PATH
 
@@ -36,11 +40,18 @@ def load_picks(path: Path | None = None) -> dict[str, Any]:
     return data
 
 
-def pick_key(game_id: Any, side: str) -> str:
-    return f"{game_id}|{str(side).lower()}"
+def normalize_market(market: str | None) -> str:
+    m = str(market or "ml").lower()
+    if m in {"spread", "spreads", "ats", "puck", "puckline", "puck_line"}:
+        return "spread"
+    return "ml"
 
 
-def matchup_id(date: str, away: str, home: str, side: str) -> str:
+def pick_key(game_id: Any, side: str, market: str = "ml") -> str:
+    return f"{game_id}|{str(side).lower()}|{normalize_market(market)}"
+
+
+def matchup_id(date: str, away: str, home: str, side: str, market: str = "ml") -> str:
     return "|".join(
         [
             str(date or ""),
@@ -48,7 +59,7 @@ def matchup_id(date: str, away: str, home: str, side: str) -> str:
             "at",
             str(home or "").upper(),
             str(side or "").lower(),
-            "ml",
+            normalize_market(market),
         ]
     )
 
@@ -147,6 +158,7 @@ def equity_curve(picks: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "matchup": f"{p.get('away_abbreviation') or p.get('away')} @ {p.get('home_abbreviation') or p.get('home')}",
                 "side": p.get("takeSide") or p.get("side"),
                 "team": p.get("takeTeam") or p.get("team"),
+                "market": normalize_market(p.get("market")),
                 "result": p.get("result"),
                 "profit": profit,
                 "cum": cum,
@@ -157,92 +169,160 @@ def equity_curve(picks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def _migrate_pick_key(pick: dict[str, Any]) -> str:
+    """Legacy keys were game|side (moneyline). Prefer explicit market suffix."""
+    existing = str(pick.get("pickKey") or "")
+    market = normalize_market(pick.get("market"))
+    if existing.endswith("|spread") or existing.endswith("|ml"):
+        return existing
+    if existing.count("|") == 1:
+        # game|side → game|side|ml (historical board was ML-only)
+        pick["market"] = market if pick.get("market") else "ml"
+        return f"{existing}|{normalize_market(pick.get('market'))}"
+    gid = pick.get("game_id")
+    side = pick.get("takeSide") or pick.get("side") or ""
+    return pick_key(gid, side, market)
+
+
+def _insert_pick(
+    by_key: dict[str, dict[str, Any]],
+    *,
+    game: dict[str, Any],
+    side: str,
+    market: str,
+    decimal: float | None,
+    point: float | None,
+    book: str | None,
+    model_p: float | None,
+    ev: float | None,
+) -> bool:
+    game_id = game.get("game_id")
+    if game_id is None or side not in {"home", "away"}:
+        return False
+    market_n = normalize_market(market)
+    key = pick_key(game_id, side, market_n)
+    if key in by_key:
+        return False
+    is_home = side == "home"
+    team = game.get("home_abbreviation") if is_home else game.get("away_abbreviation")
+    american = decimal_to_american(decimal)
+    pick = {
+        "pickKey": key,
+        "matchupId": matchup_id(
+            str(game.get("date") or ""),
+            str(game.get("away_abbreviation") or ""),
+            str(game.get("home_abbreviation") or ""),
+            side,
+            market_n,
+        ),
+        "loggedAt": _now_iso(),
+        "sport": "NHL",
+        "league": "NHL",
+        "date": game.get("date"),
+        "game_id": game_id,
+        "away": game.get("away_team"),
+        "home": game.get("home_team"),
+        "away_abbreviation": game.get("away_abbreviation"),
+        "home_abbreviation": game.get("home_abbreviation"),
+        "takeSide": side,
+        "takeTeam": team,
+        "side": side,
+        "team": team,
+        "market": market_n,
+        "point": point,
+        "line": point if market_n == "spread" else american,
+        "decimal": decimal,
+        "price": american,
+        "lineSource": "odds-api",
+        "lineBook": book,
+        "model_prob": model_p,
+        "ev": ev,
+        "bucket": "pos_ev" if (ev is not None and ev > 0) else "best_side",
+        "result": None,
+        "profit": None,
+        "gradedAt": None,
+        "gradeSource": None,
+        "awayScore": None,
+        "homeScore": None,
+    }
+    by_key[key] = pick
+    return True
+
+
 def upsert_from_board(
     board: dict[str, Any],
     *,
     min_ev: float | None = None,
     store: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Log +EV top-side recommendations once per game/side."""
+    """Log +EV ATS topsides (primary) and +EV ML topsides (bonus)."""
     min_ev = MIN_EV_TO_TRACK if min_ev is None else float(min_ev)
     store = store or load_picks()
-    by_key = {
-        str(p.get("pickKey")): p
-        for p in store.get("picks") or []
-        if p and p.get("pickKey")
-    }
+    by_key: dict[str, dict[str, Any]] = {}
+    for p in store.get("picks") or []:
+        if not p:
+            continue
+        key = _migrate_pick_key(p)
+        p["pickKey"] = key
+        by_key[key] = p
+
     inserted = 0
-
     for game in board.get("games") or []:
-        best_ev = game.get("best_ev")
-        best_side = game.get("best_side")
-        if best_side not in {"home", "away"}:
-            continue
+        # Primary: ATS / puck line
+        ats_side = game.get("best_ats_side") or (
+            game.get("best_side") if game.get("primary_market") == "spread" else None
+        )
+        ats_ev = game.get("best_ats_ev")
+        if ats_ev is None and game.get("primary_market") == "spread":
+            ats_ev = game.get("best_ev")
         try:
-            ev = float(best_ev)
+            ats_ev_f = float(ats_ev) if ats_ev is not None else None
         except (TypeError, ValueError):
-            continue
-        if ev < min_ev:
-            continue
+            ats_ev_f = None
+        if ats_side in {"home", "away"} and ats_ev_f is not None and ats_ev_f >= min_ev:
+            is_home = ats_side == "home"
+            if _insert_pick(
+                by_key,
+                game=game,
+                side=ats_side,
+                market="spread",
+                decimal=game.get("home_spread_decimal") if is_home else game.get("away_spread_decimal"),
+                point=game.get("home_spread") if is_home else game.get("away_spread"),
+                book=game.get("home_spread_book") if is_home else game.get("away_spread_book"),
+                model_p=game.get("home_cover_prob") if is_home else game.get("away_cover_prob"),
+                ev=ats_ev_f,
+            ):
+                inserted += 1
 
-        game_id = game.get("game_id")
-        if game_id is None:
-            continue
-        key = pick_key(game_id, best_side)
-        if key in by_key:
-            continue
-
-        is_home = best_side == "home"
-        decimal = game.get("home_decimal") if is_home else game.get("away_decimal")
-        book = game.get("home_book") if is_home else game.get("away_book")
-        team = (
-            game.get("home_abbreviation") if is_home else game.get("away_abbreviation")
-        )
-        model_p = (
-            game.get("home_win_probability")
-            if is_home
-            else game.get("away_win_probability")
-        )
-
-        pick = {
-            "pickKey": key,
-            "matchupId": matchup_id(
-                str(game.get("date") or ""),
-                str(game.get("away_abbreviation") or ""),
-                str(game.get("home_abbreviation") or ""),
-                best_side,
-            ),
-            "loggedAt": _now_iso(),
-            "sport": "NHL",
-            "league": "NHL",
-            "date": game.get("date"),
-            "game_id": game_id,
-            "away": game.get("away_team"),
-            "home": game.get("home_team"),
-            "away_abbreviation": game.get("away_abbreviation"),
-            "home_abbreviation": game.get("home_abbreviation"),
-            "takeSide": best_side,
-            "takeTeam": team,
-            "side": best_side,
-            "team": team,
-            "market": "ml",
-            "decimal": decimal,
-            "price": decimal_to_american(decimal),
-            "line": decimal_to_american(decimal),
-            "lineSource": "odds-api",
-            "lineBook": book,
-            "model_prob": model_p,
-            "ev": ev,
-            "bucket": "pos_ev" if ev > 0 else "best_side",
-            "result": None,
-            "profit": None,
-            "gradedAt": None,
-            "gradeSource": None,
-            "awayScore": None,
-            "homeScore": None,
-        }
-        by_key[key] = pick
-        inserted += 1
+        # Bonus: moneyline
+        ml_side = game.get("best_ml_side")
+        ml_ev = game.get("best_ml_ev")
+        if ml_side is None and not game.get("best_ats_side"):
+            # Legacy boards only had ML best_side
+            ml_side = game.get("best_side")
+            ml_ev = game.get("best_ev")
+        try:
+            ml_ev_f = float(ml_ev) if ml_ev is not None else None
+        except (TypeError, ValueError):
+            ml_ev_f = None
+        if ml_side in {"home", "away"} and ml_ev_f is not None and ml_ev_f >= min_ev:
+            is_home = ml_side == "home"
+            if _insert_pick(
+                by_key,
+                game=game,
+                side=ml_side,
+                market="ml",
+                decimal=game.get("home_decimal") if is_home else game.get("away_decimal"),
+                point=None,
+                book=game.get("home_book") if is_home else game.get("away_book"),
+                model_p=(
+                    game.get("home_win_probability")
+                    if is_home
+                    else game.get("away_win_probability")
+                ),
+                ev=ml_ev_f,
+            ):
+                inserted += 1
 
     store["picks"] = list(by_key.values())
     store["_inserted"] = inserted
@@ -290,7 +370,7 @@ def grade_open_picks(
     store: dict[str, Any],
     games: pd.DataFrame,
 ) -> dict[str, Any]:
-    """Fill W/L/P + profit when a game is marked final."""
+    """Fill W/L/P + profit when a game is marked final (ATS or ML)."""
     lookup = _build_game_lookup(games)
     graded = 0
     for pick in store.get("picks") or []:
@@ -305,7 +385,15 @@ def grade_open_picks(
         home_pts = row.get("home_points")
         if pd.isna(away_pts) or pd.isna(home_pts):
             continue
-        result = grade_moneyline(pick.get("takeSide") or pick.get("side"), away_pts, home_pts)
+        side = pick.get("takeSide") or pick.get("side")
+        market = normalize_market(pick.get("market"))
+        if market == "spread":
+            point = pick.get("point")
+            if point is None:
+                point = pick.get("line")
+            result = grade_spread(side, point, away_pts, home_pts)
+        else:
+            result = grade_moneyline(side, away_pts, home_pts)
         if not result:
             continue
         pick["result"] = result
@@ -323,18 +411,28 @@ def grade_open_picks(
 def save_picks(store: dict[str, Any], path: Path | None = None) -> dict[str, Any]:
     path = path or PICKS_PATH
     picks = store.get("picks") or []
-    # Stable order: newest logged first for humans; equity built chronologically in UI/helpers
+    for p in picks:
+        p["pickKey"] = _migrate_pick_key(p)
+        p["market"] = normalize_market(p.get("market"))
     picks_sorted = sorted(
         picks,
         key=lambda p: str(p.get("loggedAt") or ""),
         reverse=True,
     )
-    summary = summarize(picks_sorted)
+    ats = [p for p in picks_sorted if normalize_market(p.get("market")) == "spread"]
+    ml = [p for p in picks_sorted if normalize_market(p.get("market")) == "ml"]
+    summary_ats = summarize(ats)
+    summary_ml = summarize(ml)
     payload = {
         "updatedAt": _now_iso(),
         "minEv": MIN_EV_TO_TRACK,
-        "summary": summary,
-        "equity": equity_curve(picks_sorted),
+        "primaryMarket": "spread",
+        "summary": summary_ats,  # ATS is the headline book
+        "summary_ats": summary_ats,
+        "summary_ml": summary_ml,
+        "equity": equity_curve(ats),
+        "equity_ats": equity_curve(ats),
+        "equity_ml": equity_curve(ml),
         "picks": picks_sorted,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -361,7 +459,7 @@ def sync_board_picks(board: dict[str, Any], games: pd.DataFrame) -> dict[str, An
                 open_dates,
                 current_nhl_season(),
             )
-        except Exception as exc:  # noqa: BLE001 — grading must not kill the board publish
+        except Exception as exc:  # noqa: BLE001
             print(f"Open-pick score refresh failed: {exc}")
 
     store = grade_open_picks(store, games_for_grade)
@@ -369,6 +467,7 @@ def sync_board_picks(board: dict[str, Any], games: pd.DataFrame) -> dict[str, An
     print(
         f"Picks ledger: +{store.get('_inserted', 0)} new, "
         f"graded {store.get('_graded', 0)}, "
-        f"total {payload['summary'].get('picks', 0)} → {PICKS_PATH}"
+        f"ATS {payload['summary_ats'].get('picks', 0)} / "
+        f"ML {payload['summary_ml'].get('picks', 0)} → {PICKS_PATH}"
     )
     return payload

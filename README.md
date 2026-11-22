@@ -1,26 +1,27 @@
 # NHL Edge
 
-A shared website that updates itself with **model win probabilities**, **sportsbook moneylines**, and **expected value (EV)** — same blueprint as NBA Edge.
+A shared website that updates itself with **model cover probabilities**, **sportsbook puck lines**, and **expected value (EV)** — same blueprint as NBA Edge.
 
 You and your friend just open the link. No Colab. No manual refresh every hour.
 
 ## How to use it
 
 1. Open the GitHub Pages URL for this repo
-2. Read the board and the **Tracked +EV ROI** section under it
+2. Read the **ATS** board (primary) and the **Moneyline** bonus tab under ROI
 
-The model shows **likelihoods**, not guaranteed winners.  
-**EV** = model probability × decimal odds − 1 (best available US book **moneyline**).
+The model shows **likelihoods**, not guaranteed covers.  
+**ATS EV** = cover_prob × decimal odds − 1 (best available US **puck line**).  
+**Moneyline** is logged separately as a bonus book — never mixed into ATS ROI.
 
-Each hourly run auto-logs topsides with **EV ≥ 0** into `docs/picks.json`, grades them when BallDontLie marks the game final, and updates the ROI equity curve (green above zero / red below).
+Each hourly run auto-logs +EV ATS (and +EV ML) topsides into `docs/picks.json`, grades them when games finish, and updates each book’s equity curve.
 
 ## What runs in the background
 
 Every hour from **8:00 AM to 11:00 PM Eastern**:
 
-1. Update the games database (BallDontLie NHL API)
-2. Train/score Model B (moneyline)
-3. Pull live moneylines (The Odds API `icehockey_nhl`)
+1. Update the games database (BallDontLie NHL API / NHL web fallback)
+2. Train/score Model B (win prob → puck-line cover)
+3. Pull live puck lines + moneylines (The Odds API `icehockey_nhl`)
 4. Publish `docs/ev_board.json` + `docs/picks.json`
 
 Overnight hours are skipped on purpose.
@@ -38,7 +39,7 @@ Repo → **Settings** → **Secrets and variables** → **Actions** → **New re
 | Secret name | Where to get it |
 |-------------|-----------------|
 | `BALLDONTLIE_API_KEY` | Optional for NHL — same key as NBA Edge. If NHL endpoints 401, we use the public NHL web API automatically. |
-| `ODDS_API_KEY` | https://dash.the-odds-api.com/ (moneylines) |
+| `ODDS_API_KEY` | https://dash.the-odds-api.com/ (spreads + moneylines) |
 
 ### 3. Turn on GitHub Pages
 
@@ -68,5 +69,5 @@ python scripts/pipeline.py --force
 
 ## Notes
 
-- v1 is **NHL moneyline EV only** (Model B Elo + rolling margins, same structure as NBA Edge).
+- Primary book is **NHL ATS / puck line**; moneyline is a **bonus** ledger (Model B Elo + rolling margins).
 - The research Colab (`NHL_Edge.ipynb`) is the longer-term feature lab; this repo is the live board.

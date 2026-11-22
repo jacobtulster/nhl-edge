@@ -23,30 +23,31 @@
         <p class="brand">NHL Edge</p>
         <h1>Today’s value board</h1>
         <p class="lede">
-          Model probabilities vs NHL moneylines. Positive EV means the model likes
-          the price more than the market. +EV topsides are logged automatically and
-          graded when games finish.
+          Primary book is <strong>ATS / puck line</strong>. Model cover probs vs best US
+          spreads; moneyline is a separate bonus ledger. +EV topsides log automatically
+          and grade when games finish.
         </p>
         <p id="meta" class="meta">Loading…</p>
       </header>
 
-      <section aria-label="EV board">
+      <section aria-label="ATS EV board">
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Matchup</th>
-                <th>Model home</th>
-                <th>Best home odds</th>
-                <th>Home EV</th>
-                <th>Best away odds</th>
-                <th>Away EV</th>
-                <th>Top side</th>
+                <th>Home cover</th>
+                <th>Home puck</th>
+                <th>Home ATS EV</th>
+                <th>Away puck</th>
+                <th>Away ATS EV</th>
+                <th>Top ATS</th>
+                <th>ML bonus</th>
               </tr>
             </thead>
             <tbody id="rows">
               <tr>
-                <td colspan="7">Loading board…</td>
+                <td colspan="8">Loading board…</td>
               </tr>
             </tbody>
           </table>
@@ -57,13 +58,14 @@
         <div class="roi-head">
           <div>
             <h2>Tracked +EV ROI</h2>
-            <p class="lede tight">
-              Auto-logged topsides (EV ≥ 0). Equity shades green above zero and red below.
+            <p class="lede tight" id="book-hint">
+              ATS is the headline book. Moneyline stays on its own tab.
             </p>
           </div>
           <p id="roi-meta" class="meta">Loading ledger…</p>
         </div>
 
+        <div class="market-tabs" id="market-tabs" role="tablist" aria-label="ROI book"></div>
         <div class="cards" id="roi-cards"></div>
 
         <div class="panel">
@@ -77,7 +79,7 @@
                 <th>When</th>
                 <th>Matchup</th>
                 <th>Pick</th>
-                <th>Odds</th>
+                <th>Line</th>
                 <th>EV</th>
                 <th>Result</th>
                 <th>Profit</th>
