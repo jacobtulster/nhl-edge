@@ -267,10 +267,16 @@ def fetch_season_games_nhl_web(season_start: int) -> list[dict]:
         weeks_list = payload.get("gameWeek") or payload.get("gameWeeks") or []
         if weeks_list:
             for day in weeks_list:
+                day_date = day.get("date") or day.get("gameDate")
                 for game in day.get("games") or []:
                     gid = game.get("id")
-                    if gid is not None:
-                        by_id[gid] = game
+                    if gid is None:
+                        continue
+                    # Weekly schedule often omits gameDate on the game object
+                    if day_date and not game.get("gameDate") and not game.get("game_date"):
+                        game = dict(game)
+                        game["gameDate"] = day_date
+                    by_id[gid] = game
         else:
             for game in payload.get("games") or []:
                 gid = game.get("id")
