@@ -1,0 +1,12 @@
+{
+  "generated_at_et": null,
+  "date": null,
+  "season": null,
+  "model": "Model B (logistic moneyline)",
+  "sport": "NHL",
+  "market": "h2h",
+  "training_games": 0,
+  "game_count": 0,
+  "games": [],
+  "note": "Waiting for the first hourly pipeline run."
+}

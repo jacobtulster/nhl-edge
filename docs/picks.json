@@ -1,0 +1,16 @@
+{
+  "updatedAt": null,
+  "minEv": 0,
+  "summary": {
+    "picks": 0,
+    "graded": 0,
+    "w": 0,
+    "l": 0,
+    "p": 0,
+    "win_pct": null,
+    "profit_u": 0,
+    "roi": null
+  },
+  "equity": [],
+  "picks": []
+}

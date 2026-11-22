@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0e1311" />
+    <title>NHL Edge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="bg"></div>
+    <main>
+      <header>
+        <p class="brand">NHL Edge</p>
+        <h1>Today’s value board</h1>
+        <p class="lede">
+          Model probabilities vs NHL moneylines. Positive EV means the model likes
+          the price more than the market. +EV topsides are logged automatically and
+          graded when games finish.
+        </p>
+        <p id="meta" class="meta">Loading…</p>
+      </header>
+
+      <section aria-label="EV board">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Matchup</th>
+                <th>Model home</th>
+                <th>Best home odds</th>
+                <th>Home EV</th>
+                <th>Best away odds</th>
+                <th>Away EV</th>
+                <th>Top side</th>
+              </tr>
+            </thead>
+            <tbody id="rows">
+              <tr>
+                <td colspan="7">Loading board…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="roi" aria-label="Tracked picks ROI">
+        <div class="roi-head">
+          <div>
+            <h2>Tracked +EV ROI</h2>
+            <p class="lede tight">
+              Auto-logged topsides (EV ≥ 0). Equity shades green above zero and red below.
+            </p>
+          </div>
+          <p id="roi-meta" class="meta">Loading ledger…</p>
+        </div>
+
+        <div class="cards" id="roi-cards"></div>
+
+        <div class="panel">
+          <div class="chart-box"><canvas id="equity-chart"></canvas></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Matchup</th>
+                <th>Pick</th>
+                <th>Odds</th>
+                <th>EV</th>
+                <th>Result</th>
+                <th>Profit</th>
+              </tr>
+            </thead>
+            <tbody id="picks-rows">
+              <tr>
+                <td colspan="7">Loading picks…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer>
+        <p id="footnote"></p>
+      </footer>
+    </main>
+  </body>
+</html>

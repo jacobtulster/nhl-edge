@@ -1,0 +1,59 @@
+name: NHL Edge hourly pipeline
+
+on:
+  schedule:
+    # Every hour UTC; Python skips outside 8am–11pm Eastern
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run even outside 8am–11pm Eastern"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline
+        timeout-minutes: 15
+        env:
+          BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          # Stay under BallDontLie free-tier limits
+          NHL_EDGE_REQUEST_DELAY: "1.6"
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
+            python scripts/pipeline.py --force
+          else
+            python scripts/pipeline.py
+          fi
+
+      - name: Commit updated board and data
+        run: |
+          git config user.name "nhl-edge-bot"
+          git config user.email "nhl-edge-bot@users.noreply.github.com"
+          git add data/games.csv data/team_state.csv docs/ev_board.json docs/picks.json || true
+          if git diff --staged --quiet; then
+            echo "No file changes to commit."
+          else
+            git commit -m "chore: update NHL Edge EV board + picks ROI"
+            git push
+          fi
