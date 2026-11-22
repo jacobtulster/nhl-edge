@@ -1,16 +1,49 @@
 {
-  "updatedAt": null,
-  "minEv": 0,
+  "updatedAt": "2026-11-22T02:31:51.283442+00:00",
+  "minEv": 0.0,
   "summary": {
-    "picks": 0,
+    "picks": 1,
     "graded": 0,
     "w": 0,
     "l": 0,
     "p": 0,
     "win_pct": null,
-    "profit_u": 0,
+    "profit_u": 0.0,
     "roi": null
   },
   "equity": [],
-  "picks": []
+  "picks": [
+    {
+      "pickKey": "2026020371|home",
+      "matchupId": "2026-11-21|MIN|at|VAN|home|ml",
+      "loggedAt": "2026-11-22T02:31:51.114581+00:00",
+      "sport": "NHL",
+      "league": "NHL",
+      "date": "2026-11-21",
+      "game_id": 2026020371,
+      "away": "MIN",
+      "home": "VAN",
+      "away_abbreviation": "MIN",
+      "home_abbreviation": "VAN",
+      "takeSide": "home",
+      "takeTeam": "VAN",
+      "side": "home",
+      "team": "VAN",
+      "market": "ml",
+      "decimal": 3.65,
+      "price": 265,
+      "line": 265,
+      "lineSource": "odds-api",
+      "lineBook": "BetRivers",
+      "model_prob": 0.3061,
+      "ev": 0.1174,
+      "bucket": "pos_ev",
+      "result": null,
+      "profit": null,
+      "gradedAt": null,
+      "gradeSource": null,
+      "awayScore": null,
+      "homeScore": null
+    }
+  ]
 }

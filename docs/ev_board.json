@@ -1,12 +1,73 @@
 {
-  "generated_at_et": null,
-  "date": null,
-  "season": null,
+  "generated_at_et": "2026-11-21 21:31:49 EST",
+  "date": "2026-11-21",
+  "season": 2026,
   "model": "Model B (logistic moneyline)",
   "sport": "NHL",
   "market": "h2h",
-  "training_games": 0,
-  "game_count": 0,
-  "games": [],
-  "note": "Waiting for the first hourly pipeline run."
+  "training_games": 3050,
+  "odds_quota": {
+    "requests_remaining": "494",
+    "requests_used": "6"
+  },
+  "game_count": 2,
+  "games": [
+    {
+      "game_id": 2026020371,
+      "date": "2026-11-21",
+      "home_team": "VAN",
+      "away_team": "MIN",
+      "home_abbreviation": "VAN",
+      "away_abbreviation": "MIN",
+      "home_win_probability": 0.3061,
+      "away_win_probability": 0.6939,
+      "home_decimal": 3.65,
+      "away_decimal": 1.35,
+      "home_implied_prob": 0.274,
+      "away_implied_prob": 0.7407,
+      "home_ev": 0.1174,
+      "away_ev": -0.0633,
+      "best_side": "home",
+      "best_ev": 0.1174,
+      "home_book": "BetRivers",
+      "away_book": "LowVig.ag",
+      "features": {
+        "home_elo_difference": -275.4936,
+        "home_recent_form_advantage": -3.8,
+        "home_avg_margin_5": -1.2,
+        "away_avg_margin_5": 3.0,
+        "home_avg_margin_10": -1.6,
+        "away_avg_margin_10": 2.2
+      }
+    },
+    {
+      "game_id": 2026020372,
+      "date": "2026-11-21",
+      "home_team": "SJS",
+      "away_team": "SEA",
+      "home_abbreviation": "SJS",
+      "away_abbreviation": "SEA",
+      "home_win_probability": 0.5276,
+      "away_win_probability": 0.4724,
+      "home_decimal": 1.88,
+      "away_decimal": 2.0,
+      "home_implied_prob": 0.5319,
+      "away_implied_prob": 0.5,
+      "home_ev": -0.0082,
+      "away_ev": -0.0551,
+      "best_side": "home",
+      "best_ev": -0.0082,
+      "home_book": "BetRivers",
+      "away_book": "DraftKings",
+      "features": {
+        "home_elo_difference": -12.0182,
+        "home_recent_form_advantage": -0.7,
+        "home_avg_margin_5": 0.0,
+        "away_avg_margin_5": -0.6,
+        "home_avg_margin_10": -1.4,
+        "away_avg_margin_10": -0.7
+      }
+    }
+  ],
+  "note": "NHL moneylines only. Probabilities are model likelihoods, not guarantees. EV is model_prob \u00d7 decimal_odds \u2212 1 using best available US book price."
 }
