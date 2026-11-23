@@ -1,39 +1,145 @@
 {
-  "updatedAt": "2026-11-22T23:56:59.497979+00:00",
+  "updatedAt": "2026-11-23T05:21:44.871386+00:00",
   "minEv": 0.0,
   "primaryMarket": "spread",
   "summary": {
     "picks": 4,
-    "graded": 0,
-    "w": 0,
-    "l": 0,
+    "graded": 4,
+    "w": 3,
+    "l": 1,
     "p": 0,
-    "win_pct": null,
-    "profit_u": 0.0,
-    "roi": null
+    "win_pct": 0.75,
+    "profit_u": 1.0,
+    "roi": 0.25
   },
   "summary_ats": {
     "picks": 4,
-    "graded": 0,
-    "w": 0,
-    "l": 0,
+    "graded": 4,
+    "w": 3,
+    "l": 1,
     "p": 0,
-    "win_pct": null,
-    "profit_u": 0.0,
-    "roi": null
+    "win_pct": 0.75,
+    "profit_u": 1.0,
+    "roi": 0.25
   },
   "summary_ml": {
     "picks": 4,
-    "graded": 1,
-    "w": 1,
-    "l": 0,
+    "graded": 4,
+    "w": 2,
+    "l": 2,
     "p": 0,
-    "win_pct": 1.0,
-    "profit_u": 2.65,
-    "roi": 2.65
+    "win_pct": 0.5,
+    "profit_u": 2.55,
+    "roi": 0.6375
   },
-  "equity": [],
-  "equity_ats": [],
+  "equity": [
+    {
+      "n": 1,
+      "when": "2026-11-23T05:21:44.869128+00:00",
+      "matchup": "CHI @ VAN",
+      "side": "home",
+      "team": "VAN",
+      "market": "spread",
+      "result": "L",
+      "profit": -1.0,
+      "cum": -1.0,
+      "pos": 0,
+      "neg": -1.0
+    },
+    {
+      "n": 2,
+      "when": "2026-11-23T05:21:44.869200+00:00",
+      "matchup": "EDM @ STL",
+      "side": "away",
+      "team": "EDM",
+      "market": "spread",
+      "result": "W",
+      "profit": 0.43,
+      "cum": -0.57,
+      "pos": 0,
+      "neg": -0.57
+    },
+    {
+      "n": 3,
+      "when": "2026-11-23T05:21:44.869245+00:00",
+      "matchup": "PIT @ DAL",
+      "side": "away",
+      "team": "PIT",
+      "market": "spread",
+      "result": "W",
+      "profit": 0.8,
+      "cum": 0.23,
+      "pos": 0.23,
+      "neg": 0
+    },
+    {
+      "n": 4,
+      "when": "2026-11-23T05:21:44.869288+00:00",
+      "matchup": "BUF @ TBL",
+      "side": "away",
+      "team": "BUF",
+      "market": "spread",
+      "result": "W",
+      "profit": 0.77,
+      "cum": 1.0,
+      "pos": 1.0,
+      "neg": 0
+    }
+  ],
+  "equity_ats": [
+    {
+      "n": 1,
+      "when": "2026-11-23T05:21:44.869128+00:00",
+      "matchup": "CHI @ VAN",
+      "side": "home",
+      "team": "VAN",
+      "market": "spread",
+      "result": "L",
+      "profit": -1.0,
+      "cum": -1.0,
+      "pos": 0,
+      "neg": -1.0
+    },
+    {
+      "n": 2,
+      "when": "2026-11-23T05:21:44.869200+00:00",
+      "matchup": "EDM @ STL",
+      "side": "away",
+      "team": "EDM",
+      "market": "spread",
+      "result": "W",
+      "profit": 0.43,
+      "cum": -0.57,
+      "pos": 0,
+      "neg": -0.57
+    },
+    {
+      "n": 3,
+      "when": "2026-11-23T05:21:44.869245+00:00",
+      "matchup": "PIT @ DAL",
+      "side": "away",
+      "team": "PIT",
+      "market": "spread",
+      "result": "W",
+      "profit": 0.8,
+      "cum": 0.23,
+      "pos": 0.23,
+      "neg": 0
+    },
+    {
+      "n": 4,
+      "when": "2026-11-23T05:21:44.869288+00:00",
+      "matchup": "BUF @ TBL",
+      "side": "away",
+      "team": "BUF",
+      "market": "spread",
+      "result": "W",
+      "profit": 0.77,
+      "cum": 1.0,
+      "pos": 1.0,
+      "neg": 0
+    }
+  ],
   "equity_ml": [
     {
       "n": 1,
@@ -46,6 +152,45 @@
       "profit": 2.65,
       "cum": 2.65,
       "pos": 2.65,
+      "neg": 0
+    },
+    {
+      "n": 2,
+      "when": "2026-11-23T05:21:44.869169+00:00",
+      "matchup": "EDM @ STL",
+      "side": "away",
+      "team": "EDM",
+      "market": "ml",
+      "result": "L",
+      "profit": -1.0,
+      "cum": 1.65,
+      "pos": 1.65,
+      "neg": 0
+    },
+    {
+      "n": 3,
+      "when": "2026-11-23T05:21:44.869223+00:00",
+      "matchup": "PIT @ DAL",
+      "side": "away",
+      "team": "PIT",
+      "market": "ml",
+      "result": "L",
+      "profit": -1.0,
+      "cum": 0.65,
+      "pos": 0.65,
+      "neg": 0
+    },
+    {
+      "n": 4,
+      "when": "2026-11-23T05:21:44.869267+00:00",
+      "matchup": "BUF @ TBL",
+      "side": "away",
+      "team": "BUF",
+      "market": "ml",
+      "result": "W",
+      "profit": 1.9,
+      "cum": 2.55,
+      "pos": 2.55,
       "neg": 0
     }
   ],
@@ -76,12 +221,12 @@
       "model_prob": 0.8451,
       "ev": 0.1831,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "L",
+      "profit": -1.0,
+      "gradedAt": "2026-11-23T05:21:44.869128+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 6.0,
+      "homeScore": 3.0
     },
     {
       "pickKey": "2026020375|away|ml",
@@ -109,12 +254,12 @@
       "model_prob": 0.4828,
       "ev": 0.009,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "L",
+      "profit": -1.0,
+      "gradedAt": "2026-11-23T05:21:44.869169+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 4.0,
+      "homeScore": 5.0
     },
     {
       "pickKey": "2026020375|away|spread",
@@ -142,12 +287,12 @@
       "model_prob": 0.845,
       "ev": 0.2083,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "W",
+      "profit": 0.43,
+      "gradedAt": "2026-11-23T05:21:44.869200+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 4.0,
+      "homeScore": 5.0
     },
     {
       "pickKey": "2026020376|away|ml",
@@ -175,12 +320,12 @@
       "model_prob": 0.3386,
       "ev": 0.0159,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "L",
+      "profit": -1.0,
+      "gradedAt": "2026-11-23T05:21:44.869223+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 0.0,
+      "homeScore": 1.0
     },
     {
       "pickKey": "2026020376|away|spread",
@@ -208,12 +353,12 @@
       "model_prob": 0.7494,
       "ev": 0.3489,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "W",
+      "profit": 0.8,
+      "gradedAt": "2026-11-23T05:21:44.869245+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 0.0,
+      "homeScore": 1.0
     },
     {
       "pickKey": "2026020374|away|ml",
@@ -241,12 +386,12 @@
       "model_prob": 0.3799,
       "ev": 0.1016,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "W",
+      "profit": 1.9,
+      "gradedAt": "2026-11-23T05:21:44.869267+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 6.0,
+      "homeScore": 2.0
     },
     {
       "pickKey": "2026020374|away|spread",
@@ -274,12 +419,12 @@
       "model_prob": 0.7815,
       "ev": 0.3833,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "W",
+      "profit": 0.77,
+      "gradedAt": "2026-11-23T05:21:44.869288+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 6.0,
+      "homeScore": 2.0
     },
     {
       "pickKey": "2026020371|home|ml",
