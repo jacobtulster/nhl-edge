@@ -1,36 +1,36 @@
 {
-  "updatedAt": "2026-11-24T23:42:02.824147+00:00",
+  "updatedAt": "2026-11-25T06:08:59.709473+00:00",
   "minEv": 0.0,
   "primaryMarket": "spread",
   "summary": {
     "picks": 12,
-    "graded": 11,
+    "graded": 12,
     "w": 9,
-    "l": 2,
+    "l": 3,
     "p": 0,
-    "win_pct": 0.8182,
-    "profit_u": 3.4,
-    "roi": 0.3091
+    "win_pct": 0.75,
+    "profit_u": 2.4,
+    "roi": 0.2
   },
   "summary_ats": {
     "picks": 12,
-    "graded": 11,
+    "graded": 12,
     "w": 9,
-    "l": 2,
+    "l": 3,
     "p": 0,
-    "win_pct": 0.8182,
-    "profit_u": 3.4,
-    "roi": 0.3091
+    "win_pct": 0.75,
+    "profit_u": 2.4,
+    "roi": 0.2
   },
   "summary_ml": {
     "picks": 11,
-    "graded": 10,
+    "graded": 11,
     "w": 3,
-    "l": 7,
+    "l": 8,
     "p": 0,
-    "win_pct": 0.3,
-    "profit_u": -1.46,
-    "roi": -0.146
+    "win_pct": 0.2727,
+    "profit_u": -2.46,
+    "roi": -0.2236
   },
   "equity": [
     {
@@ -174,6 +174,19 @@
       "profit": -1.0,
       "cum": 3.4,
       "pos": 3.4,
+      "neg": 0
+    },
+    {
+      "n": 12,
+      "when": "2026-11-25T06:08:59.707235+00:00",
+      "matchup": "VGK @ EDM",
+      "side": "home",
+      "team": "EDM",
+      "market": "spread",
+      "result": "L",
+      "profit": -1.0,
+      "cum": 2.4,
+      "pos": 2.4,
       "neg": 0
     }
   ],
@@ -320,6 +333,19 @@
       "cum": 3.4,
       "pos": 3.4,
       "neg": 0
+    },
+    {
+      "n": 12,
+      "when": "2026-11-25T06:08:59.707235+00:00",
+      "matchup": "VGK @ EDM",
+      "side": "home",
+      "team": "EDM",
+      "market": "spread",
+      "result": "L",
+      "profit": -1.0,
+      "cum": 2.4,
+      "pos": 2.4,
+      "neg": 0
     }
   ],
   "equity_ml": [
@@ -452,6 +478,19 @@
       "cum": -1.46,
       "pos": 0,
       "neg": -1.46
+    },
+    {
+      "n": 11,
+      "when": "2026-11-25T06:08:59.707190+00:00",
+      "matchup": "VGK @ EDM",
+      "side": "home",
+      "team": "EDM",
+      "market": "ml",
+      "result": "L",
+      "profit": -1.0,
+      "cum": -2.46,
+      "pos": 0,
+      "neg": -2.46
     }
   ],
   "picks": [
@@ -481,12 +520,12 @@
       "model_prob": 0.599,
       "ev": 0.198,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "L",
+      "profit": -1.0,
+      "gradedAt": "2026-11-25T06:08:59.707190+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 5.0,
+      "homeScore": 3.0
     },
     {
       "pickKey": "2026020385|home|spread",
@@ -514,12 +553,12 @@
       "model_prob": 0.8972,
       "ev": 0.265,
       "bucket": "pos_ev",
-      "result": null,
-      "profit": null,
-      "gradedAt": null,
-      "gradeSource": null,
-      "awayScore": null,
-      "homeScore": null
+      "result": "L",
+      "profit": -1.0,
+      "gradedAt": "2026-11-25T06:08:59.707235+00:00",
+      "gradeSource": "balldontlie",
+      "awayScore": 5.0,
+      "homeScore": 3.0
     },
     {
       "pickKey": "2026020379|home|ml",
