@@ -1,5 +1,5 @@
 {
-  "generated_at_et": "2026-11-26 14:55:59 EST",
+  "generated_at_et": "2026-11-26 21:34:42 EST",
   "date": "2026-11-26",
   "season": 2026,
   "model": "Model B (win prob \u2192 puck-line cover)",
@@ -9,8 +9,8 @@
   "primary_market": "spread",
   "training_games": 3087,
   "odds_quota": {
-    "requests_remaining": "459",
-    "requests_used": "41"
+    "requests_remaining": "455",
+    "requests_used": "45"
   },
   "game_count": 0,
   "games": [],
